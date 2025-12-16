@@ -31,6 +31,8 @@ input[type="submit"]:active{opacity:0.6;}
 body.main-page{background:#fff;transition:all 0.3s ease;margin:0;}
 .main-content{display:none;width:100%;min-height:100vh;position:relative;overflow:auto;padding-top:60px;transition:margin-left 0.3s ease;}
 
+
+
 /* BACKGROUND */
 .background-container{position:absolute;top:60px;left:0;width:100%;height:calc(100% - 60px);background-size:cover;background-position:center;z-index:0;transition: transform 1s ease, opacity 1s ease;}
 
@@ -400,6 +402,7 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
 
     <div class="content" id="content-area">
         <div class="page" id="home">
+            <div class="background-container"></div>
             <h1>Selamat Datang di Website Kelas 10 PPLG</h1>
         </div>
 
@@ -417,7 +420,7 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
                 <h3>Anggota Lainnya</h3>
                 <div class="anggotas" id="anggota-lain"></div>
             </div>
-            <button id="tambah-anggota-struktur" style="margin-top:15px;padding:10px 15px;background:#DAA520;border:none;border-radius:5px;cursor:pointer;">Tambah Anggota Struktur</button>
+
         </div>
 
         <!-- TAMBAH AKUN WEBSITE -->
@@ -432,26 +435,9 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
             <div class="gallery"></div>
         </div>
     </div>
-</div>
-
 <!-- Lightbox -->
 <div id="lightbox"></div>
 
-<!-- FORM TAMBAH ANGGOTA STRUKTUR -->
-<div id="add-anggota-form">
-    <h3>Tambah Anggota Struktur</h3>
-    <select id="struktur-role">
-        <option value="">Pilih Jenis</option>
-        <option value="pembina">Pembina</option>
-        <option value="inti">Anggota Inti</option>
-        <option value="lain">Anggota Lainnya</option>
-    </select>
-    <input type="text" id="struktur-nama" placeholder="Nama Lengkap">
-    <input type="text" id="struktur-jabatan" placeholder="Jabatan (kosong jika anggota lainnya)">
-    <input type="file" id="struktur-foto-file">
-    <button class="submit-btn" id="submit-anggota">Tambah</button>
-    <button class="cancel-btn" id="cancel-anggota">Batal</button>
-</div>
 
 <!-- FORM TAMBAH AKUN WEBSITE -->
 <div id="add-member-form">
@@ -469,10 +455,15 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
     </form>
 </div>
 
+
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 // ===== FIREBASE CONFIG =====
@@ -487,7 +478,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const storage = firebase.storage();
 const auth = firebase.auth();
 
 // ===== GLOBAL =====
@@ -498,6 +488,11 @@ const mainContent = document.getElementById('main-content');
 const galleryContainer = document.querySelector('#gallery .gallery');
 const galleryBtn = document.getElementById('add-image');
 const lightbox = document.getElementById('lightbox');
+
+// ===== SUPABASE CONFIG =====
+const supabaseUrl = "https://bzkphcyhegnpozcxdzqi.supabase.co";
+const supabaseKey = "sb_publishable_BO-R8l0Psl1kvOrU5tWQcw_-KFMLDJV";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // ===== LOGIN =====
 loginForm.addEventListener('submit', function(e){
@@ -520,22 +515,23 @@ loginForm.addEventListener('submit', function(e){
                 showPage('home');
                 if(activeUser.role==="admin") document.getElementById('menu-tambah-akun').style.display="block";
                 initAdminWebsiteMember();
-                initStrukturRealtime();
             });
         }).catch(error=>alert("Login gagal: "+error.message));
 });
 
 // ===== DARK MODE =====
-document.getElementById('theme-toggle').addEventListener('click', ()=>{
+document.getElementById('theme-toggle').addEventListener('click', ()=> {
     document.body.classList.toggle('dark');
-    if(activeUser) localStorage.setItem("theme_"+activeUser.username, document.body.classList.contains("dark")?"dark":"light");
+    if(activeUser) localStorage.setItem("theme_"+activeUser.username,
+        document.body.classList.contains("dark")?"dark":"light"
+    );
 });
 
 // ===== SIDEBAR =====
 const hamburger = document.getElementById('hamburger');
 const sidebar = document.getElementById('sidebar');
 const contentArea = document.getElementById('content-area');
-hamburger.addEventListener('click', ()=>{sidebar.classList.toggle('open');contentArea.style.marginLeft=sidebar.classList.contains('open')?'200px':'0';});
+hamburger.addEventListener('click', ()=>{sidebar.classList.toggle('open'); contentArea.style.marginLeft = sidebar.classList.contains('open')?'200px':'0';});
 
 // ===== NAVIGATION =====
 document.querySelectorAll('.sidebar a').forEach(link=>{
@@ -551,46 +547,152 @@ function showPage(pageId){
     if(page) page.style.display='block';
 }
 
-// ===== BACKGROUND SLIDE =====
-const bgImages=["bg1.jpg","bg2.jpg","bg3.jpg"];
-let bgIndex=0;
-const bgContainer=document.querySelector('.background-container');
-function changeBgSlide(){
-    bgContainer.style.opacity=0;
-    setTimeout(()=>{
-        bgContainer.style.backgroundImage=`url(${bgImages[bgIndex]})`;
-        bgContainer.style.opacity=1;
-        bgIndex=(bgIndex+1)%bgImages.length;
-    },500);
-}
-setInterval(changeBgSlide,5000);
-changeBgSlide();
+// Hanya tampilkan background di halaman home
+function showPage(pageId){
+    document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+    const page = document.getElementById(pageId);
+    if(page) page.style.display='block';
 
-// ===== GALLERY =====
-galleryBtn.addEventListener('click', ()=>{
-    const fileInput=document.createElement('input');
-    fileInput.type="file"; fileInput.accept="image/*,video/*";
-    fileInput.onchange=e=>{
-        const file=e.target.files[0];
-        const storageRef=storage.ref('gallery/'+file.name);
-        storageRef.put(file).then(()=>storageRef.getDownloadURL().then(url=>{
-            const el=file.type.startsWith("image")?document.createElement('img'):document.createElement('video');
-            if(file.type.startsWith("video")) el.controls=true;
-            el.src=url;
-            el.addEventListener('click',()=>showLightbox(url,file.type.startsWith("video")));
-            galleryContainer.appendChild(el);
-        }));
+    // Hanya tampilkan background jika page home
+    const bgContainer = document.querySelector('.background-container');
+    if(pageId === 'home'){
+        bgContainer.style.display = 'block';
+        bgContainer.style.backgroundImage = "url('99 kubah.jpg')"; // ganti gambar di sini
+    } else {
+        bgContainer.style.display = 'none';
+    }
+}
+
+
+
+// ===== GALLERY SUPABASE =====
+galleryBtn.addEventListener('click', () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = "file";
+    fileInput.accept = "image/*,video/*";
+
+    fileInput.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // ===== VALIDASI MIME TYPE =====
+        const allowedTypes = ['image/jpeg','image/png','image/gif','video/mp4','video/webm'];
+        if(!allowedTypes.includes(file.type)){
+            alert("File tidak diizinkan! Hanya gambar atau video.");
+            return;
+        }
+        // ============================
+
+        const fileName = Date.now() + "_" + file.name;
+
+        // upload ke Supabase
+        const { error } = await supabase.storage
+            .from('gallery')
+            .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+        if (error) {
+            alert("Upload gagal: " + error.message);
+            return;
+        }
+
+        // ambil URL publik
+        const { data } = supabase.storage
+            .from('gallery')
+            .getPublicUrl(fileName);
+        const url = data.publicUrl;
+
+        const el = file.type.startsWith("image")
+            ? document.createElement('img')
+            : document.createElement('video');
+
+        if (file.type.startsWith("video")) el.controls = true;
+        el.src = url;
+
+        el.addEventListener('click', () =>
+            showLightbox(url, file.type.startsWith("video"))
+        );
+
+        galleryContainer.appendChild(el);
     };
+
     fileInput.click();
 });
-function showLightbox(src,isVideo){
-    lightbox.innerHTML='';
-    const el=isVideo?document.createElement('video'):document.createElement('img');
-    el.src=src; if(isVideo) el.controls=true;
+
+// ===== LIGHTBOX DENGAN ZOOM =====
+function showLightbox(src, isVideo) {
+    lightbox.innerHTML = '';
+    lightbox.style.display = 'flex';
+    lightbox.style.justifyContent = 'center';
+    lightbox.style.alignItems = 'center';
+    lightbox.style.background = 'rgba(0,0,0,0.8)';
+    lightbox.style.overflow = 'hidden';
+
+    const el = isVideo ? document.createElement('video') : document.createElement('img');
+    el.src = src;
+    if (isVideo) el.controls = true;
+
+    // atur zoom awal
+    let scale = 1;
+    el.style.transition = 'transform 0.2s';
+    el.style.maxWidth = '90%';
+    el.style.maxHeight = '90%';
+
+    // zoom dengan mouse wheel
+    el.addEventListener('wheel', e => {
+        e.preventDefault();
+        if (e.deltaY < 0) scale *= 1.1; // zoom in
+        else scale /= 1.1; // zoom out
+        el.style.transform = `scale(${scale})`;
+    });
+
+    // tombol zoom in
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.textContent = '+';
+    zoomInBtn.style.position = 'absolute';
+    zoomInBtn.style.bottom = '20px';
+    zoomInBtn.style.left = '50%';
+    zoomInBtn.style.transform = 'translateX(-60px)';
+    zoomInBtn.style.padding = '10px 15px';
+    zoomInBtn.style.fontSize = '18px';
+    zoomInBtn.style.cursor = 'pointer';
+    zoomInBtn.style.borderRadius = '5px';
+    zoomInBtn.style.border = 'none';
+    zoomInBtn.style.background = '#fff';
+    zoomInBtn.addEventListener('click', () => {
+        scale *= 1.2;
+        el.style.transform = `scale(${scale})`;
+    });
+
+    // tombol zoom out
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.textContent = '-';
+    zoomOutBtn.style.position = 'absolute';
+    zoomOutBtn.style.bottom = '20px';
+    zoomOutBtn.style.left = '50%';
+    zoomOutBtn.style.transform = 'translateX(60px)';
+    zoomOutBtn.style.padding = '10px 15px';
+    zoomOutBtn.style.fontSize = '18px';
+    zoomOutBtn.style.cursor = 'pointer';
+    zoomOutBtn.style.borderRadius = '5px';
+    zoomOutBtn.style.border = 'none';
+    zoomOutBtn.style.background = '#fff';
+    zoomOutBtn.addEventListener('click', () => {
+        scale /= 1.2;
+        el.style.transform = `scale(${scale})`;
+    });
+
     lightbox.appendChild(el);
-    lightbox.style.display='flex';
+    lightbox.appendChild(zoomInBtn);
+    lightbox.appendChild(zoomOutBtn);
+
+    // klik di luar untuk tutup lightbox
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            lightbox.style.display = 'none';
+            lightbox.innerHTML = '';
+        }
+    });
 }
-lightbox.addEventListener('click', ()=>lightbox.style.display='none');
 
 // ===== TAMBAH AKUN WEBSITE =====
 function initAdminWebsiteMember(){
@@ -598,11 +700,9 @@ function initAdminWebsiteMember(){
     const memberForm=document.getElementById("add-member-form");
     const listAkunDiv=document.getElementById("list-akun");
 
-    // tombol cancel
-    document.getElementById("cancel-member").addEventListener('click',()=>memberForm.style.display="none");
+    document.getElementById("cancel-member").addEventListener('click', ()=>memberForm.style.display="none");
 
-    // submit form
-    document.getElementById("member-form").addEventListener("submit",function(e){
+    document.getElementById("member-form").addEventListener("submit", function(e){
         e.preventDefault();
         const username=document.getElementById("new-username").value.trim().toLowerCase();
         const password=document.getElementById("new-password").value;
@@ -620,105 +720,106 @@ function initAdminWebsiteMember(){
         }).catch(err=>alert("Gagal: "+err.message));
     });
 
-    // show tombol
-    document.querySelector('#menu-tambah-akun a').addEventListener('click',()=>{
-        memberForm.style.display="block";
-    });
+    document.querySelector('#menu-tambah-akun a').addEventListener('click', ()=>memberForm.style.display="block");
 
-    // realtime list akun
-    db.ref("users").on("value",snapshot=>{
+    db.ref("users").on("value", snapshot=>{
         listAkunDiv.innerHTML="";
         snapshot.forEach(s=>{
             const u=s.val(); const uid=s.key;
-            const div=document.createElement('div'); div.style.display="flex";div.style.alignItems="center";div.style.justifyContent="space-between";div.style.marginBottom="5px";
+            const div=document.createElement('div');
+            div.style.display="flex"; div.style.alignItems="center"; div.style.justifyContent="space-between"; div.style.marginBottom="5px";
             div.innerHTML=`<span>${u.username} (${u.role}) - ${u.online?'Online':'Offline'}</span>`;
-            const delBtn=document.createElement('button'); delBtn.textContent='Hapus'; delBtn.style.background='red'; delBtn.style.color='#fff'; delBtn.style.border='none'; delBtn.style.borderRadius='4px'; delBtn.style.padding='3px 6px';
+            const delBtn=document.createElement('button');
+            delBtn.textContent='Hapus'; delBtn.style.background='red'; delBtn.style.color='#fff'; delBtn.style.border='none'; delBtn.style.borderRadius='4px'; delBtn.style.padding='3px 6px';
             delBtn.onclick=()=>{if(confirm("Hapus akun ini?")) db.ref("users/"+uid).remove();};
-            div.appendChild(delBtn); listAkunDiv.appendChild(div);
+            div.appendChild(delBtn);
+            listAkunDiv.appendChild(div);
         });
     });
 
-    // update online status
     const userStatusDatabaseRef = db.ref("/users/"+activeUser.uid+"/online");
     userStatusDatabaseRef.set(true);
-    window.addEventListener('beforeunload',()=> userStatusDatabaseRef.set(false));
+    window.addEventListener('beforeunload', ()=>userStatusDatabaseRef.set(false));
+}
+</script>
+
+<script>
+
+// data awal: 1 pembina, 4 inti, 33 lainnya
+const data = {
+    pembina: [
+        {
+            foto: "assets/foto/pembina.jpg",
+            jabatan: "Wali Kelas",
+            nama: "Bu Amelia Chintani"
+        }
+    ],
+    inti: [
+        {
+            foto: "assets/foto/ketua.jpg",
+            jabatan: "Ketua Kelas",
+            nama: "M. Kahfi Reski Pratama"
+        },
+        {
+            foto: "assets/foto/wakil.jpg",
+            jabatan: "Wakil Ketua",
+            nama: "Muh. Azzam Adiyatma"
+        },
+        {
+            foto: "assets/foto/sekretaris.jpg",
+            jabatan: "Sekretaris",
+            nama: "Ade Luna"
+        },
+        {
+            foto: "assets/foto/bendahara.jpg",
+            jabatan: "Bendahara",
+            nama: "Nadya Zahira Nasrun"
+        }
+    ],
+    lain: [
+        { foto: "assets/foto/alya.jpg", nama: "Alya Nugraha" },
+        { foto: "assets/foto/andi.jpg", nama: "Andi Dwi Fahrezi" }
+    ]
+};
+
+function renderAll(){
+    renderStruktur(data.pembina,'pembina','pembina');
+    renderStruktur(data.inti,'anggota-inti','inti');
+    renderStruktur(data.lain,'anggota-lain','lain');
 }
 
-// ===== STRUKTUR KELAS REALTIME =====
-function initStrukturRealtime(){
-    const tambahBtn=document.getElementById('tambah-anggota-struktur');
-    const addForm=document.getElementById('add-anggota-form');
-    const roleInput=document.getElementById('struktur-role');
-    const namaInput=document.getElementById('struktur-nama');
-    const jabInput=document.getElementById('struktur-jabatan');
-    const fotoFileInput=document.getElementById('struktur-foto-file');
-    const submitBtn=document.getElementById('submit-anggota');
-    const cancelBtn=document.getElementById('cancel-anggota');
+renderAll();
 
-    const anggotaRef = db.ref('struktur');
-    // render realtime
-    anggotaRef.on('value',snapshot=>{
-        const data=snapshot.val()||{pembina:[],inti:[],lain:[]};
-        renderStruktur(data.pembina,'pembina','pembina');
-        renderStruktur(data.inti,'anggota-inti','inti');
-        renderStruktur(data.lain,'anggota-lain','lain');
-    });
+function renderStruktur(list, id, roleType){
+    const container = document.getElementById(id);
+    container.innerHTML = '';
 
-    // tampilkan form
-    tambahBtn.addEventListener('click',()=> addForm.style.display='block');
-    cancelBtn.addEventListener('click',()=> addForm.style.display='none');
+    list.forEach(u=>{
+        const div = document.createElement('div');
+        div.className = 'anggota';
 
-    submitBtn.addEventListener('click',()=>{
-        const role=roleInput.value;
-        const nama=namaInput.value.trim();
-        const jab=jabInput.value.trim();
-        const file=fotoFileInput.files[0];
-        if(!role||!nama||!file) return alert("Lengkapi data!");
+        const img = document.createElement('img');
+        img.src = u.foto || 'assets/foto/default.jpg';
+        div.appendChild(img);
 
-        const storageRef = storage.ref('struktur/'+file.name);
-        storageRef.put(file).then(()=>storageRef.getDownloadURL().then(url=>{
-            const newData={nama,jabatan:jab,foto:url};
-            anggotaRef.child(role).once('value').then(snap=>{
-                const list=snap.val()||[];
-                list.push(newData);
-                anggotaRef.child(role).set(list);
-            });
-            addForm.style.display='none';
-            namaInput.value=''; jabInput.value=''; fotoFileInput.value='';
-            roleInput.value='';
-        }));
+        if(roleType !== 'lain'){
+            const jab = document.createElement('div');
+            jab.className = 'jabatan';
+            jab.textContent = u.jabatan || '';
+            div.appendChild(jab);
+        }
+
+        const nama = document.createElement('div');
+        nama.className = 'nama';
+        nama.textContent = u.nama;
+        div.appendChild(nama);
+
+        container.appendChild(div);
     });
 }
 
-// render struktur
-function renderStruktur(list,id,roleType){
-    const container=document.getElementById(id);
-    container.innerHTML='';
-    list.forEach((u,index)=>{
-        const div=document.createElement('div'); div.className='anggota admin';
-        const img=document.createElement('img'); img.src=u.foto; img.title='Klik untuk ubah foto';
-        img.onclick=()=>{
-            if(activeUser.role!=='admin') return;
-            const fileInput=document.createElement('input'); fileInput.type='file';
-            fileInput.onchange=e=>{
-                const f=e.target.files[0];
-                storage.ref('struktur/'+f.name).put(f).then(()=>storage.ref('struktur/'+f.name).getDownloadURL().then(url=>{
-                    u.foto=url;
-                    db.ref('struktur/'+roleType+'/'+index).update({foto:url});
-                }));
-            }; fileInput.click();
-        };
-        const jab=document.createElement('div'); jab.className='jabatan'; jab.textContent=u.jabatan||"";
-        const nama=document.createElement('div'); nama.className='nama'; nama.textContent=u.nama;
-        const delBtn=document.createElement('button'); delBtn.className='delete-btn'; delBtn.textContent='×';
-        delBtn.onclick=()=>{
-            if(confirm("Hapus anggota ini?")){
-                db.ref('struktur/'+roleType+'/'+index).remove();
-            }
-        };
-        div.append(img,jab,nama,delBtn); container.appendChild(div);
-    });
-}
+
+
 </script>
 </body>
 </html>
