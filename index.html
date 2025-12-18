@@ -58,7 +58,7 @@ body.main-page{background:#fff;transition:all 0.3s ease;margin:0;}
 .page{display:none;position:relative;z-index:1;padding-top:20px;text-align:center;}
 
 /* HOME */
-#home{display:flex;justify-content:center;align-items:center;text-align:center;min-height: calc(100vh - 60px);position:relative;z-index:1;color:#fff;}
+#home{display:flex;justify-content:center;align-items:center;text-align:center;min-height: calc(100vh - 60px);position:relative;z-index:1;color:#010101;}
 
 /* STRUKTUR KELAS */
 #struktur{display:flex;flex-direction:column;gap:40px;align-items:center;}
@@ -71,6 +71,10 @@ body.main-page{background:#fff;transition:all 0.3s ease;margin:0;}
 .delete-btn{position:absolute;top:5px; right:5px;background:red;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;display:none;}
 .anggota.admin:hover .delete-btn{display:block;}
 
+
+
+
+
 /* Gallery */
 #gallery{color:#000;}
 body.dark #gallery{color:#fff;}
@@ -78,6 +82,26 @@ body.dark #gallery{color:#fff;}
 #gallery .gallery img, #gallery .gallery video{width:150px;height:100px;object-fit:cover;border-radius:5px;cursor:pointer;}
 #gallery button{margin:5px;padding:8px 12px;cursor:pointer;border:none;background:#DAA520;color:#000;border-radius:5px;}
 #gallery button:hover{background:#C6930A;color:#fff;}
+
+/* BACKGROUND GALLERY */
+#gallery::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:url('assets/logo/bg-gallery.png') center/contain no-repeat;
+    opacity:0.12;
+    z-index:0;
+}
+
+#gallery > *{
+    position:relative;
+    z-index:1;
+}
+
+
 
 /* DARK MODE */
 body.dark{background:#121212;color:#fff;}
@@ -97,6 +121,20 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
 #add-anggota-form button{padding:10px;border:none;border-radius:5px;cursor:pointer;margin-top:5px;}
 #add-anggota-form .submit-btn{background:#DAA520;color:#000;font-weight:600;}
 #add-anggota-form .cancel-btn{background:#C6930A;color:#fff;}
+
+/* LOGO TENGAH STRUKTUR KELAS */
+.logo-struktur-wrapper{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px 0;
+}
+
+.logo-struktur{
+    width: 150px;       /* bisa kamu ubah */
+    max-width: 80%;
+    height: auto;
+}
 
 /* FORM TAMBAH AKUN WEBSITE */
 #add-member-form{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -408,6 +446,9 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
 
         <!-- STRUKTUR KELAS -->
         <div class="page" id="struktur">
+            <!-- LOGO STRUKTUR KELAS -->
+   
+
             <div class="kelompok">
                 <h3>Pembina Kelas</h3>
                 <div class="anggotas" id="pembina"></div>
@@ -466,7 +507,13 @@ background:#222;padding:30px;border-radius:8px;z-index:3000;box-shadow:0 0 20px 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// ===== FIREBASE CONFIG =====
+// ================= SUPABASE INIT =================
+const supabase = window.supabase.createClient(
+  "https://bzkphcyhegnpozcxdzqi.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6a3BoY3loZWducG96Y3hkenFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4OTU3NDEsImV4cCI6MjA4MTQ3MTc0MX0.KcemZK2UOkigbWFRLlV5DIHa79jfcwMyKB4Xp6u46IE"
+);
+
+// ================= FIREBASE CONFIG =================
 const firebaseConfig = {
   apiKey: "AIzaSyAxQDonRxQDUikVefKbBUNoydmY4xAhNyE",
   authDomain: "website-kelas-4c071.firebaseapp.com",
@@ -477,10 +524,14 @@ const firebaseConfig = {
   appId: "1:596162787744:web:86b959e4ee0a4f35a6ccc5"
 };
 firebase.initializeApp(firebaseConfig);
+const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = secondaryApp.auth();
+
+
 const db = firebase.database();
 const auth = firebase.auth();
 
-// ===== GLOBAL =====
+// ================= GLOBAL =================
 let activeUser = JSON.parse(localStorage.getItem("activeUser"));
 const loginForm = document.querySelector('.form');
 const loginPage = document.getElementById('login-page');
@@ -489,41 +540,39 @@ const galleryContainer = document.querySelector('#gallery .gallery');
 const galleryBtn = document.getElementById('add-image');
 const lightbox = document.getElementById('lightbox');
 
-// ===== SUPABASE CONFIG =====
-const supabaseUrl = "https://bzkphcyhegnpozcxdzqi.supabase.co";
-const supabaseKey = "sb_publishable_BO-R8l0Psl1kvOrU5tWQcw_-KFMLDJV";
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// ================= LOGIN =================
+loginForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim().toLowerCase();
+  const password = document.getElementById('password').value.trim();
+  const email = username.replace(/\s+/g,"_")+"@kelas-pplg.local";
 
-// ===== LOGIN =====
-loginForm.addEventListener('submit', function(e){
-    e.preventDefault();
-    const username = document.getElementById('username').value.trim().toLowerCase();
-    const password = document.getElementById('password').value.trim();
-    const email = username.replace(/\s+/g, "_") + "@kelas-pplg.local";
-
-    auth.signInWithEmailAndPassword(email, password)
-        .then(userCredential=>{
-            const user = userCredential.user;
-            db.ref("users/"+user.uid).once("value").then(snapshot=>{
-                const userData = snapshot.val();
-                if(!userData){alert("Data user tidak ditemukan!");auth.signOut();return;}
-                activeUser={uid:user.uid,username:userData.username,role:userData.role};
-                localStorage.setItem("activeUser",JSON.stringify(activeUser));
-                loginPage.style.display='none';
-                mainContent.style.display='block';
-                document.body.classList.add('main-page');
-                showPage('home');
-                if(activeUser.role==="admin") document.getElementById('menu-tambah-akun').style.display="block";
-                initAdminWebsiteMember();
-            });
-        }).catch(error=>alert("Login gagal: "+error.message));
+  auth.signInWithEmailAndPassword(email,password)
+    .then(res=>{
+      const user=res.user;
+      db.ref("users/"+user.uid).once("value").then(snap=>{
+        const d=snap.val();
+        if(!d) return alert("Data user tidak ditemukan");
+        activeUser={uid:user.uid,username:d.username,role:d.role};
+        localStorage.setItem("activeUser",JSON.stringify(activeUser));
+        loginPage.style.display="none";
+        mainContent.style.display="block";
+        document.body.classList.add("main-page");
+        showPage("home");
+        if(activeUser.role==="admin") document.getElementById("menu-tambah-akun").style.display="block";
+        initAdminWebsiteMember();
+        loadGallery();
+      });
+    })
+    .catch(e=>alert("Login gagal: "+e.message));
 });
+
 
 // ===== DARK MODE =====
 document.getElementById('theme-toggle').addEventListener('click', ()=> {
     document.body.classList.toggle('dark');
     if(activeUser) localStorage.setItem("theme_"+activeUser.username,
-        document.body.classList.contains("dark")?"dark":"light"
+        document.body.classList.contains("dark")?"dark":"dark"
     );
 });
 
@@ -557,66 +606,197 @@ function showPage(pageId){
     const bgContainer = document.querySelector('.background-container');
     if(pageId === 'home'){
         bgContainer.style.display = 'block';
-        bgContainer.style.backgroundImage = "url('99 kubah.jpg')"; // ganti gambar di sini
+        bgContainer.style.backgroundImage = "url('java2.png')"; // ganti gambar di sini
     } else {
         bgContainer.style.display = 'none';
     }
 }
 
 
+// ================= GALLERY =================
+async function loadGallery(){
+  galleryContainer.innerHTML="";
+  const { data, error } = await supabase.from("gallery").select("*");
+  if(error) return console.error(error.message);
 
-// ===== GALLERY SUPABASE =====
-galleryBtn.addEventListener('click', () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = "file";
-    fileInput.accept = "image/*,video/*";
+  data.forEach(i=>{
+    appendGalleryItem(i.file_url, i.mime_type, i.file_name);
+  });
+}
 
-    fileInput.onchange = async e => {
-        const file = e.target.files[0];
-        if (!file) return;
+function appendGalleryItem(url, type, fileName){
+  const el = type.startsWith("image") ? document.createElement("img") : document.createElement("video");
+  el.src = url;
+  if(type.startsWith("video")) el.controls=true;
+  el.style.cursor="zoom-in";
+  el.onclick=()=>showLightbox(url, type.startsWith("video"));
 
-        // ===== VALIDASI MIME TYPE =====
-        const allowedTypes = ['image/jpeg','image/png','image/gif','video/mp4','video/webm'];
-        if(!allowedTypes.includes(file.type)){
-            alert("File tidak diizinkan! Hanya gambar atau video.");
-            return;
-        }
-        // ============================
+  if(activeUser?.role==="admin"){
+    const wrap=document.createElement("div");
+    wrap.style.position="relative";
+    wrap.appendChild(el);
 
-        const fileName = Date.now() + "_" + file.name;
-
-        // upload ke Supabase
-        const { error } = await supabase.storage
-            .from('gallery')
-            .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
-        if (error) {
-            alert("Upload gagal: " + error.message);
-            return;
-        }
-
-        // ambil URL publik
-        const { data } = supabase.storage
-            .from('gallery')
-            .getPublicUrl(fileName);
-        const url = data.publicUrl;
-
-        const el = file.type.startsWith("image")
-            ? document.createElement('img')
-            : document.createElement('video');
-
-        if (file.type.startsWith("video")) el.controls = true;
-        el.src = url;
-
-        el.addEventListener('click', () =>
-            showLightbox(url, file.type.startsWith("video"))
-        );
-
-        galleryContainer.appendChild(el);
+    const del=document.createElement("button");
+    del.textContent="Hapus";
+    del.style.cssText="position:absolute;top:5px;right:5px;background:red;color:#fff;border:none;border-radius:4px";
+    del.onclick=async e=>{
+      e.stopPropagation();
+      if(!confirm("Hapus file ini?")) return;
+      await supabase.storage.from("gallery").remove([fileName]);
+      await supabase.from("gallery").delete().eq("file_name",fileName);
+      wrap.remove();
     };
 
-    fileInput.click();
+    wrap.appendChild(del);
+    galleryContainer.appendChild(wrap);
+  } else galleryContainer.appendChild(el);
+}
+
+galleryBtn.addEventListener("click",()=>{
+  const input=document.createElement("input");
+  input.type="file";
+  input.accept="image/*,video/*";
+  input.onchange=async e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+
+    const fileName=Date.now()+"_"+file.name;
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from("gallery")
+      .upload(fileName,file);
+
+    if(uploadError){
+      alert("Upload gagal: "+uploadError.message);
+      return;
+    }
+
+    const { data: publicData } = supabase
+      .storage
+      .from("gallery")
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicData.publicUrl;
+
+    const { error: dbError } = await supabase.from("gallery").insert([{
+      file_name:fileName,
+      file_url:publicUrl,
+      mime_type:file.type
+    }]);
+
+    if(dbError){
+      alert("Gagal simpan metadata: "+dbError.message);
+      return;
+    }
+
+    appendGalleryItem(publicUrl,file.type,fileName);
+  };
+  input.click();
 });
+
+
+// ================= LIGHTBOX =================
+function showLightbox(src,isVideo){
+  lightbox.innerHTML="";
+  lightbox.style.display="flex";
+  const el=isVideo?document.createElement("video"):document.createElement("img");
+  el.src=src;
+  if(isVideo) el.controls=true;
+  el.style.maxWidth="90%";
+  el.style.maxHeight="90%";
+  lightbox.appendChild(el);
+  lightbox.onclick=()=>lightbox.style.display="none";
+}
+</script>
+<script>
+
+// ===== TAMBAH AKUN WEBSITE =====
+function initAdminWebsiteMember(){
+    if(activeUser.role!=="admin") return;
+    const memberForm = document.getElementById("add-member-form");
+    const listAkunDiv = document.getElementById("list-akun");
+    const submitBtn = document.querySelector("#member-form input[type='submit']");
+
+    // tombol cancel
+    document.getElementById("cancel-member").addEventListener('click', ()=>memberForm.style.display="none");
+
+    // submit form
+    document.getElementById("member-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        const username = document.getElementById("new-username").value.trim().toLowerCase();
+        const password = document.getElementById("new-password").value;
+        const role = document.getElementById("new-role").value;
+        if(!username || !password || !role) return alert("Lengkapi semua data!");
+
+        const email = username.replace(/\s+/g,"_") + "@kelas-pplg.local";
+
+        // disable tombol submit agar tidak double klik
+        submitBtn.disabled = true;
+
+        // cek apakah username sudah ada di database
+        db.ref("users").orderByChild("username").equalTo(username).once("value", snapshot => {
+            if(snapshot.exists()){
+                alert("Username sudah ada!");
+                submitBtn.disabled = false;
+                return;
+            }
+
+            // buat akun di Firebase Auth
+            secondaryAuth.createUserWithEmailAndPassword(email, password)
+
+            .then(userCredential=>{
+                const user = userCredential.user;
+                // simpan data di database
+                db.ref("users/"+user.uid).set({username, role, online:false});
+                alert("Akun berhasil dibuat!");
+                memberForm.style.display="none";
+                document.getElementById("member-form").reset();
+                submitBtn.disabled = false;
+            })
+            .catch(err=>{
+                alert("Gagal: " + err.message);
+                submitBtn.disabled = false;
+            });
+        });
+    });
+
+    // show form tambah akun
+    document.querySelector('#menu-tambah-akun a').addEventListener('click', ()=>memberForm.style.display="block");
+
+    // realtime list akun
+    db.ref("users").on("value", snapshot=>{
+        listAkunDiv.innerHTML="";
+        snapshot.forEach(s=>{
+            const u = s.val(); 
+            const uid = s.key;
+            const div = document.createElement('div');
+            div.style.display="flex"; 
+            div.style.alignItems="center"; 
+            div.style.justifyContent="space-between"; 
+            div.style.marginBottom="5px";
+            div.innerHTML=`<span>${u.username} (${u.role}) - ${u.online?'Online':'Offline'}</span>`;
+            const delBtn = document.createElement('button');
+            delBtn.textContent='Hapus'; 
+            delBtn.style.background='red'; 
+            delBtn.style.color='#fff'; 
+            delBtn.style.border='none'; 
+            delBtn.style.borderRadius='4px'; 
+            delBtn.style.padding='3px 6px';
+            delBtn.onclick = ()=>{
+                if(confirm("Hapus akun ini?")) db.ref("users/"+uid).remove();
+            };
+            div.appendChild(delBtn);
+            listAkunDiv.appendChild(div);
+        });
+    });
+
+    // update status online
+    const userStatusDatabaseRef = db.ref("/users/"+activeUser.uid+"/online");
+    userStatusDatabaseRef.set(true);
+    window.addEventListener('beforeunload', ()=>userStatusDatabaseRef.set(false));
+}
+
 
 // ===== LIGHTBOX DENGAN ZOOM =====
 function showLightbox(src, isVideo) {
@@ -694,87 +874,17 @@ function showLightbox(src, isVideo) {
     });
 }
 
-// ===== TAMBAH AKUN WEBSITE =====
-function initAdminWebsiteMember(){
-    if(activeUser.role!=="admin") return;
-    const memberForm=document.getElementById("add-member-form");
-    const listAkunDiv=document.getElementById("list-akun");
 
-    document.getElementById("cancel-member").addEventListener('click', ()=>memberForm.style.display="none");
-
-    document.getElementById("member-form").addEventListener("submit", function(e){
-        e.preventDefault();
-        const username=document.getElementById("new-username").value.trim().toLowerCase();
-        const password=document.getElementById("new-password").value;
-        const role=document.getElementById("new-role").value;
-        if(!username||!password||!role) return alert("Lengkapi semua data!");
-        const email=username.replace(/\s+/g,"_")+"@kelas-pplg.local";
-
-        auth.createUserWithEmailAndPassword(email,password)
-        .then(userCredential=>{
-            const user=userCredential.user;
-            db.ref("users/"+user.uid).set({username,role,online:false});
-            alert("Akun berhasil dibuat!");
-            memberForm.style.display="none";
-            document.getElementById("member-form").reset();
-        }).catch(err=>alert("Gagal: "+err.message));
-    });
-
-    document.querySelector('#menu-tambah-akun a').addEventListener('click', ()=>memberForm.style.display="block");
-
-    db.ref("users").on("value", snapshot=>{
-        listAkunDiv.innerHTML="";
-        snapshot.forEach(s=>{
-            const u=s.val(); const uid=s.key;
-            const div=document.createElement('div');
-            div.style.display="flex"; div.style.alignItems="center"; div.style.justifyContent="space-between"; div.style.marginBottom="5px";
-            div.innerHTML=`<span>${u.username} (${u.role}) - ${u.online?'Online':'Offline'}</span>`;
-            const delBtn=document.createElement('button');
-            delBtn.textContent='Hapus'; delBtn.style.background='red'; delBtn.style.color='#fff'; delBtn.style.border='none'; delBtn.style.borderRadius='4px'; delBtn.style.padding='3px 6px';
-            delBtn.onclick=()=>{if(confirm("Hapus akun ini?")) db.ref("users/"+uid).remove();};
-            div.appendChild(delBtn);
-            listAkunDiv.appendChild(div);
-        });
-    });
-
-    const userStatusDatabaseRef = db.ref("/users/"+activeUser.uid+"/online");
-    userStatusDatabaseRef.set(true);
-    window.addEventListener('beforeunload', ()=>userStatusDatabaseRef.set(false));
-}
-</script>
-
-<script>
-
-// data awal: 1 pembina, 4 inti, 33 lainnya
+// ===== STRUKTUR KELAS =====
 const data = {
     pembina: [
-        {
-            foto: "assets/foto/pembina.jpg",
-            jabatan: "Wali Kelas",
-            nama: "Bu Amelia Chintani"
-        }
+        { foto: "assets/foto/pembina.jpg", jabatan: "Wali Kelas", nama: "Bu Amelia Chintani" }
     ],
     inti: [
-        {
-            foto: "assets/foto/ketua.jpg",
-            jabatan: "Ketua Kelas",
-            nama: "M. Kahfi Reski Pratama"
-        },
-        {
-            foto: "assets/foto/wakil.jpg",
-            jabatan: "Wakil Ketua",
-            nama: "Muh. Azzam Adiyatma"
-        },
-        {
-            foto: "assets/foto/sekretaris.jpg",
-            jabatan: "Sekretaris",
-            nama: "Ade Luna"
-        },
-        {
-            foto: "assets/foto/bendahara.jpg",
-            jabatan: "Bendahara",
-            nama: "Nadya Zahira Nasrun"
-        }
+        { foto: "assets/foto/ketua.jpg", jabatan: "Ketua Kelas", nama: "M. Kahfi Reski Pratama" },
+        { foto: "assets/foto/wakil.jpg", jabatan: "Wakil Ketua", nama: "Muh. Azzam Adiyatma" },
+        { foto: "assets/foto/sekretaris.jpg", jabatan: "Sekretaris", nama: "Ade Luna" },
+        { foto: "assets/foto/bendahara.jpg", jabatan: "Bendahara", nama: "Nadya Zahira Nasrun" }
     ],
     lain: [
         { foto: "assets/foto/alya.jpg", nama: "Alya Nugraha" },
@@ -793,33 +903,20 @@ renderAll();
 function renderStruktur(list, id, roleType){
     const container = document.getElementById(id);
     container.innerHTML = '';
-
     list.forEach(u=>{
-        const div = document.createElement('div');
-        div.className = 'anggota';
-
-        const img = document.createElement('img');
-        img.src = u.foto || 'assets/foto/default.jpg';
-        div.appendChild(img);
-
-        if(roleType !== 'lain'){
-            const jab = document.createElement('div');
-            jab.className = 'jabatan';
-            jab.textContent = u.jabatan || '';
-            div.appendChild(jab);
+        const div=document.createElement('div'); div.className='anggota';
+        const img=document.createElement('img'); img.src=u.foto || 'assets/foto/default.jpg'; div.appendChild(img);
+        if(roleType!=='lain'){
+            const jab=document.createElement('div'); jab.className='jabatan'; jab.textContent=u.jabatan||''; div.appendChild(jab);
         }
-
-        const nama = document.createElement('div');
-        nama.className = 'nama';
-        nama.textContent = u.nama;
-        div.appendChild(nama);
-
+        const nama=document.createElement('div'); nama.className='nama'; nama.textContent=u.nama; div.appendChild(nama);
         container.appendChild(div);
     });
 }
-
-
-
 </script>
+
+
+
+
 </body>
 </html>
